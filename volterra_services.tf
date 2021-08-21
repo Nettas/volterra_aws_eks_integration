@@ -1,7 +1,7 @@
 ############################ Volterra Origin Pool (eks service ClusterIP) ###########################
 resource "volterra_origin_pool" "app" {
   name                   = nginx-eks-web
-  namespace              = var.namespace
+  namespace              = var.volterra_namespace
   endpoint_selection     = "DISTRIBUTED"
   loadbalancer_algorithm = "LB_OVERRIDE"
   port                   = 80
@@ -13,33 +13,33 @@ resource "volterra_origin_pool" "app" {
       outside_network = true
       vk8s_networks   = false
       service_name    = var.service_name
-    }
-    private_ip {
-      ip = module.webserver[each.key].workspaceManagementAddress
       site_locator {
         site {
-          tenant    = var.volterraTenant
-          namespace = "system"
-          name      = volterra_aws_vpc_site.bu[each.key].name
+          tenant      = var.tenant_name
+          name        = volterra_aws_vpc_site.name
+          namespace   = "system"
         }
       }
-      inside_network = true
     }
-
-    labels = merge(local.volterra_common_labels, {
-      "bu" = each.key
-    })
   }
+}
+
+############################ Volterra WAF#########################
+resource "volterra_waf" "waf" {
+  name        = var.waf
+  description = "block mode"
+  namespace   = var.volterra_namespace
+  mode = "BLOCK"
 }
 
 ############################ Volterra HTTP LB ############################
 
-resource "volterra_http_loadbalancer" "app" {
+resource "volterra_http_loadbalancer" "service" {
   for_each                        = local.business_units
   name                            = format("%s-%s-app-%s", var.projectPrefix, each.key, var.buildSuffix)
   namespace                       = var.namespace
   no_challenge                    = true
-  domains                         = [format("%sapp.%s", each.key, var.domain_name)]
+  domains                         = var.delegated_dns_domain
   random                          = true
   disable_rate_limit              = true
   service_policies_from_namespace = true
