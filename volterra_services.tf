@@ -1,6 +1,6 @@
 ############################ Volterra Origin Pool (eks service ClusterIP) ###########################
 resource "volterra_origin_pool" "app" {
-  name                   = var.origin_name
+  name                   = nginx-eks-web
   namespace              = var.namespace
   endpoint_selection     = "DISTRIBUTED"
   loadbalancer_algorithm = "LB_OVERRIDE"
@@ -8,6 +8,12 @@ resource "volterra_origin_pool" "app" {
   no_tls                 = true
 
   origin_servers {
+    k8s_service {
+      inside_network  = false
+      outside_network = true
+      vk8s_networks   = false
+      service_name    = var.service_name
+    }
     private_ip {
       ip = module.webserver[each.key].workspaceManagementAddress
       site_locator {
