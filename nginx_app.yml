@@ -1,34 +1,37 @@
+### Create namespace
 apiVersion: v1
 kind: Namespace
 metadata:
    name: nginx-app
 ---
+###Create Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx-eks-vm
+  name: nginx-eks-web
   namespace: nginx
 spec:
   selector:
     matchLabels:
-      app: nginx-eks-vm
+      app: nginx-eks-web
   replicas: 1
   template: # template for the pods
     metadata:
       labels:
-        app: nginx-eks-vm
+        app: nginx-eks-web
     spec:
       containers:
-      - name: nginx-eks-vm
+      - name: nginx-eks-web
         image: nginxdemos/hello
         ports:
           - name: http
             containerPort: 80
 ---
+###Create Service
 apiVersion: v1
 kind: Service
 metadata:
-  name: nginx-eks-vm
+  name: nginx-eks-web
   namespace: nginx
 
 spec:
@@ -36,7 +39,7 @@ spec:
   # The service becomes a network endpoint for either other services
   # or maybe external users to connect to (eg browser)
   selector:
-    app: nginx-eks-vm
+    app: nginx-eks-web
 
   ports:
     - name: http
