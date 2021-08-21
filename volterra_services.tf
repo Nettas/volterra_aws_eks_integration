@@ -34,38 +34,32 @@ resource "volterra_waf" "waf" {
 
 ############################ Volterra HTTP LB ############################
 
-resource "volterra_http_loadbalancer" "service" {
-  for_each                        = local.business_units
-  name                            = format("%s-%s-app-%s", var.projectPrefix, each.key, var.buildSuffix)
-  namespace                       = var.namespace
-  no_challenge                    = true
-  domains                         = var.delegated_dns_domain
-  random                          = true
-  disable_rate_limit              = true
-  service_policies_from_namespace = true
-  disable_waf                     = true
-
-  advertise_custom {
-    advertise_where {
-      port = 80
-      virtual_site {
-        network = "SITE_NETWORK_INSIDE"
-        virtual_site {
-          name      = var.volterraVirtualSite
-          namespace = var.namespace
-          tenant    = var.volterraTenant
-        }
-      }
-    }
-  }
-
+resource "volterra_http_loadbalancer" "eks_service_nginx_app" {
+  name                            = "nginx-eks-web"
+  namespace                       = var.volterra_namespace
+  depends_on                      = [time_sleep.ns_wait]
+  description                     = "LB for EKS service"
+  domains                         = [var.app_fqdn]
+  advertise_on_public_default_vip = true
+  labels                          = { "ves.io/app_type" = volterra_app_type.at.name }
   default_route_pools {
     pool {
-      name = volterra_origin_pool.app[each.key].name
+      name      = volterra_origin_pool.app.name
+      namespace = var.volterra_namespace
     }
   }
-
-  http {
-    dns_volterra_managed = false
+  https_auto_cert {
+    add_hsts      = false
+    http_redirect = true
+    no_mtls       = true
   }
+  waf {
+    name      = volterra_waf.waf.name
+    namespace = var.volterra_namespace
+  }
+  disable_waf                     = false
+  disable_rate_limit              = true
+  round_robin                     = true
+  service_policies_from_namespace = true
+  no_challenge                    = true
 }
